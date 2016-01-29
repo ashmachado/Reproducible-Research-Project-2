@@ -1,0 +1,174 @@
+---
+title: "Storm Data Analysis - Course Project 2"
+author: "Ashley Machado"
+date: "January 26, 2016"
+output: html_document
+---
+
+This project will involve analysis of Storm Data from U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database
+As part of the analysis, we will try to answer 2 questions: 
+1. Identify the most harmful weather events,across United States, to the population's health.
+                                      and 
+2. Identify the weather events which have the greatest economic consequences. 
+
+###Data pre-processing section:
+
+Loading relevant libraries
+```{r, echo=FALSE, message=FALSE}
+if(!require(dplyr)) {
+    install.packages("dplyr")
+    library(dplyr)  
+  }
+  if(!require(ggplot2)) {
+    install.packages("ggplot2")
+    library(ggplot2)  
+  }
+  if(!require(lattice)) {
+    install.packages("lattice")
+    library(lattice)  
+  }
+```
+
+The storm data, which is in bz2 zipfile format will be read into a R dataframe.
+
+```{r,  echo=TRUE, message=FALSE, cache=TRUE}
+stormDF <- read.csv(bzfile("repdata-data-StormData.csv.bz2"))
+```
+
+To answer both the questions, we will subset the dataset to get only the weather event type(EVTYPE), fatalities(FATALITIES), injuries(INJURIES),Property Damage(PROPDMG),Property damage amount's exponent(PROPDMGEXP), Crop Damage(CROPDMG) and Crop damage amount's exponent(CROPDMGEXP) columns(variables).
+
+To consolidate the harm done to the population, We will add up the fatalities(FATALITIES) and injuries(INJURIES) to create a new column(variable) - HARM - for the weather event types(EVTYPE).
+
+The property and crop damage amounts have exponent values columns -PROPDMGEXP and CROPDMGEXP. 
+And the exponent values are represented by alphabetical characters - "K" for thousands, "M" for millions, and "B" for billions. 
+We will convert these alphabetical characters to their exponential values and then multiply them to their corresponding damage amounts. 
+Any alphabet character other than - "K", "M", "B" - will be coverted to Zero(0) value, which will result in a Zero(0) damage amount.
+
+```{r, echo=TRUE, message=FALSE}
+
+subsetDF <- subset(stormDF, select = c("EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP"))
+
+subsetDF$HARM <- subsetDF$FATALITIES+subsetDF$INJURIES
+
+subsetDF <- subsetDF %>% mutate(
+  PROPDMGEXP = ifelse (PROPDMGEXP == "K",1*10^3, 
+              ifelse (PROPDMGEXP == "M",1*10^6,
+               ifelse (PROPDMGEXP == "B",1*10^9,0))) ,
+               
+  CROPDMGEXP = ifelse (CROPDMGEXP == "K",1*10^3, 
+              ifelse   (CROPDMGEXP == "M",1*10^6,
+               ifelse   (CROPDMGEXP == "B",1*10^9,0))) 
+  )
+
+subsetDF$PROPDMG <- subsetDF$PROPDMG*subsetDF$PROPDMGEXP
+subsetDF$CROPDMG <- subsetDF$CROPDMG*subsetDF$CROPDMGEXP
+
+uniqueEV <- length(unique(subsetDF$EVTYPE))
+
+```
+
+###Results
+
+To answer the first question of identifying  weather events most harmful to human population, we will generate 3 different views for the top 10 harmful weather events.
+
+The first view will be the combined Fatalities and Injuries(count) because of Weather events. 
+```{r, echo=TRUE, fig.height= 4, fig.width= 9}
+subsetCombHarm <- subsetDF %>% group_by(EVTYPE) %>% summarise(CombinedImpact = sum(HARM)) %>% arrange(desc(CombinedImpact))
+subsetCombHarm <- as.data.frame(subsetCombHarm)
+subsetCombHarm <- subsetCombHarm[order(subsetCombHarm[,2], decreasing = TRUE),]
+ggplot(data = subsetCombHarm[1:10,], aes(x=EVTYPE, 
+    y=reorder(CombinedImpact, -table(CombinedImpact)[CombinedImpact])
+    , fill=factor(CombinedImpact))) +      geom_bar(position="dodge",stat="identity") + coord_flip() + 
+  ggtitle("Top 10 Weather events which led to Fatalities and Injuries")+ 
+  ylab("Combined Fatalities and Injuries count")+
+  xlab("Top Ten Weather events")
+```
+
+The second view will be the Fatality(count) because of weather events.
+```{r, echo=TRUE, fig.height= 4, fig.width= 9, fig.align="RIGHT"}
+subsetFatalHarm <- subsetDF %>% group_by(EVTYPE) %>% summarise(FatalHarm = sum(FATALITIES)) %>% arrange(desc(FatalHarm))
+subsetFatalHarm <- as.data.frame(subsetFatalHarm)
+subsetFatalHarm <- subsetFatalHarm[order(subsetFatalHarm[,2], decreasing = TRUE),]
+ggplot(data = subsetFatalHarm[1:10,], aes(x=EVTYPE, 
+    y=reorder(FatalHarm, -table(FatalHarm)[FatalHarm])
+    , fill=factor(FatalHarm))) +      geom_bar(position="dodge",stat="identity") + coord_flip() + 
+  ggtitle("Top 10 Weather events which led to Fatalities")+ 
+  ylab("Fatality count")+
+  xlab("Top Ten Weather events")
+
+```
+
+The Third view will be the Injured(count) because of weather events.
+```{r, echo=TRUE, fig.height= 4, fig.width= 9}
+
+subsetInjuryHarm <- subsetDF %>% group_by(EVTYPE) %>% summarise(InjuryHarm = sum(INJURIES)) %>% arrange(desc(InjuryHarm))
+subsetInjuryHarm <- as.data.frame(subsetInjuryHarm)
+subsetInjuryHarm <- subsetInjuryHarm[order(subsetInjuryHarm[,2], decreasing = TRUE),]
+ggplot(data = subsetInjuryHarm[1:10,], aes(x=EVTYPE, 
+    y=reorder(InjuryHarm, -table(InjuryHarm)[InjuryHarm])
+    , fill=factor(InjuryHarm))) +      geom_bar(position="dodge",stat="identity") + coord_flip() + 
+  ggtitle("Top 10 Weather events which led to Injuries")+ 
+  ylab("Injured count")+
+  xlab("Top Ten Weather events")
+
+```
+
+
+To identify the weather events which have the greatest economic consequences. we will generate 3 different views for top 10 weather events.
+
+The First view will be the property damage cost because of the weather events.
+
+```{r, echo=TRUE, fig.height= 4, fig.width= 9}
+options(scipen = 10)
+
+PropDmgDF <- subsetDF %>% group_by(EVTYPE) %>% summarise(PropertyDamage = sum(PROPDMG)) %>% arrange(desc(PropertyDamage))
+PropDmgDF <- as.data.frame(PropDmgDF)
+PropDmgDF <- PropDmgDF[order(PropDmgDF[,2], decreasing = TRUE),]
+ggplot(data = PropDmgDF[1:10,], aes(x=EVTYPE, 
+    y=reorder(PropertyDamage, -table(PropertyDamage)[PropertyDamage])
+    , fill=factor(PropertyDamage))) +      geom_bar(position="dodge",stat="identity") + coord_flip() + 
+  ggtitle("Top 10 Weather events which led to Property Damage")+ 
+  ylab("Property Damage cost")+
+  xlab("Top Ten Weather events")
+
+```
+
+
+The Second view will be the Crop damage cost because of the weather events.
+
+```{r, echo=TRUE, fig.height= 4, fig.width= 9}
+
+CropDmgDF <- subsetDF %>% group_by(EVTYPE) %>% summarise(CropDamage = sum(CROPDMG)) %>% arrange(desc(CropDamage))
+CropDmgDF <- as.data.frame(CropDmgDF)
+CropDmgDF <- CropDmgDF[order(CropDmgDF[,2], decreasing = TRUE),]
+ggplot(data = CropDmgDF[1:10,], aes(x=EVTYPE, 
+    y=reorder(CropDamage, -table(CropDamage)[CropDamage])
+    , fill=factor(CropDamage))) +      geom_bar(position="dodge",stat="identity") + coord_flip() + 
+  ggtitle("Top 10 Weather events which led to Crop Damage")+ 
+  ylab("Crop Damage cost")+
+  xlab("Top Ten Weather events")
+
+```
+
+The Third view will be the Combined Property and Crop damage cost because of the weather events.
+
+```{r, echo=TRUE, fig.height= 4, fig.width= 9}
+
+subsetDF$CombDmg <- subsetDF$PROPDMG+subsetDF$CROPDMG
+
+CombDmgDF <- subsetDF %>% group_by(EVTYPE) %>% summarise(CombinedDamage = sum(CombDmg)) %>% arrange(desc(CombinedDamage))
+CombDmgDF <- as.data.frame(CombDmgDF)
+CombDmgDF <- CombDmgDF[order(CombDmgDF[,2], decreasing = TRUE),]
+ggplot(data = CombDmgDF[1:10,], aes(x=EVTYPE, 
+    y=reorder(CombinedDamage, -table(CombinedDamage)[CombinedDamage])
+    , fill=factor(CombinedDamage))) +      geom_bar(position="dodge",stat="identity") + coord_flip() + 
+  ggtitle("Top 10 Weather events which led to Combined Property and Crop Damage")+ 
+  ylab("Combined Property and Crop Damaged Cost")+
+  xlab("Top Ten Weather events")
+
+```
+
+
+
+
+
