@@ -4,7 +4,7 @@ author: "Ashley Machado"
 date: "January 26, 2016"
 output: html_document
 ---
-
+###Synopsis
 This project will involve analysis of Storm Data from U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database.
 As part of the analysis, we will try to answer 2 questions: 
 1. Identify the most harmful weather events,across United States, to the population's health.
@@ -208,7 +208,7 @@ grid.arrange(First,Second,Third)
 ```
 
 
-###Summary/Synopsis:
+###Summary:
 Below are the summarized findings of the data analysis done to identity the impact of severe weather events on human population and the economic damage they cause.
 
 The severe weather event which caused the maximum combined harm(Fatalities and Injuries) to human population  is `r subsetCombHarm[1,1]`. 
