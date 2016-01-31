@@ -208,7 +208,7 @@ grid.arrange(First,Second,Third)
 ```
 
 
-###Summary:
+###Summary/Synopsis:
 Below are the summarized findings of the data analysis done to identity the impact of severe weather events on human population and the economic damage they cause.
 
 The severe weather event which caused the maximum combined harm(Fatalities and Injuries) to human population  is `r subsetCombHarm[1,1]`. 
